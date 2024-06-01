@@ -1,0 +1,49 @@
+---
+
+- name: Bootstrap prereq 
+  import_tasks: prereq.yml
+
+- name: Install sealed secrets key
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('file', 'sealed_secrets_key.yml') | from_yaml }}"
+    kubeconfig: "{{ kubeconfig }}"
+
+- name: Create argocd namespace
+  k8s:
+    api_version: v1
+    kind: Namespace
+    name: "{{ argocd_namespace }}"
+    state: present
+    kubeconfig: "{{ kubeconfig }}"
+
+- name: Download argocd manifest
+  get_url:
+    url: "{{ argocd_url }}"
+    dest: /tmp/argocd_install.yaml
+    owner: root
+    group: root
+    mode: 0440
+
+- name: Create argocd resources
+  k8s:
+    namespace: "{{ argocd_namespace }}"
+    src: /tmp/argocd_install.yaml
+    state: present
+    kubeconfig: "{{ kubeconfig }}"
+
+
+- name: Download app-of-apps manifest
+  get_url:
+    url: "{{ argocd_app_of_apps_url }}"
+    dest: /tmp/app_of_apps.yaml
+    owner: root
+    group: root
+    mode: 0440
+
+- name: Create app-of-apps resource
+  k8s:
+    namespace: "{{ argocd_namespace }}"
+    src: /tmp/app_of_apps.yaml
+    state: present
+    kubeconfig: "{{ kubeconfig }}"
